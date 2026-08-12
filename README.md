@@ -17,17 +17,18 @@ Projede **BERT tabanlı sentiment analysis**, **topic modeling**, veri temizleme
 
 ## 🛠️ Technologies
 
-* Python
-* BERT
-* Natural Language Processing (NLP)
-* Sentiment Analysis
-* Topic Modeling
-* Pandas
-* NumPy
-* Scikit-learn
-* Matplotlib
-* FastAPI
-* HTML
+- Python
+- Hugging Face Transformers
+- BERT
+- Natural Language Processing (NLP)
+- Sentiment Analysis
+- Topic Modeling
+- Pandas
+- NumPy
+- Scikit-learn
+- Matplotlib
+- FastAPI
+- HTML
 
 ## 🔄 Project Workflow
 
