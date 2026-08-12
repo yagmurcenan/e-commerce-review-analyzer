@@ -216,10 +216,6 @@ Buna karşılık veri işleme, model eğitimi, test, değerlendirme ve pipeline 
 
 Projeyi çalıştırmadan önce gerekli Python paketlerini yükleyin:
 
-```bash
-pip install -r requirements.txt
-```
-
 ## ▶️ Running the Application
 
 Gerekli bağımlılıklar kurulduktan sonra FastAPI uygulaması aşağıdaki komutla çalıştırılabilir:
