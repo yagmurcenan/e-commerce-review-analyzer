@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ReviewInsight | AI Enhanced Analytics</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+      :root {
+        --primary: #6366f1; --accent: #a855f7; --success: #10b981; --danger: #ef4444; --warning: #f59e0b;
+        --bg: #0b0f1a; --glass: rgba(15, 23, 42, 0.65); --border: rgba(255, 255, 255, 0.1); --text-muted: #94a3b8;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: "Plus Jakarta Sans", sans-serif; background: var(--bg); color: #f8fafc;
+        min-height: 100vh; overflow-x: hidden; scroll-behavior: smooth;
+      }
+      .video-background {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; object-fit: cover; opacity: 0.5;
+      }
+      .overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: linear-gradient(to bottom, rgba(11, 15, 26, 0.7), rgba(11, 15, 26, 0.5)); z-index: -1;
+      }
+      nav {
+        padding: 1.2rem 8%; display: flex; justify-content: space-between; align-items: center;
+        backdrop-filter: blur(15px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1000;
+      }
+      .brand {
+        font-size: 1.5rem; font-weight: 800; background: linear-gradient(to right, #818cf8, #c084fc);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      }
+      .container { max-width: 1100px; margin: 3rem auto; padding: 0 20px; position: relative; }
+      .glass-card {
+        background: var(--glass); backdrop-filter: blur(25px); border: 1px solid var(--border);
+        border-radius: 2rem; overflow: hidden; margin-bottom: 3rem; padding: 2.5rem;
+      }
+      .glass-card-no-pad { padding: 0; } /* Tabs container için */
+
+      .tabs { display: flex; background: rgba(15, 23, 42, 0.4); border-bottom: 1px solid var(--border); }
+      .tab-btn {
+        flex: 1; padding: 1.5rem; border: none; background: transparent; color: var(--text-muted);
+        font-weight: 700; cursor: pointer; transition: 0.3s; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;
+      }
+      .tab-btn.active { color: var(--primary); background: rgba(99, 102, 241, 0.05); border-bottom: 3px solid var(--primary); }
+      .content-area { padding: 2.5rem; }
+      .input-group { display: none; }
+      .input-group.active { display: block; animation: fadeIn 0.4s ease; }
+      textarea, .url-input {
+        width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border);
+        border-radius: 1rem; padding: 1.5rem; color: white; font-size: 1rem; outline: none;
+      }
+      textarea { height: 180px; resize: none; }
+      .file-drop {
+        border: 2px dashed var(--border); padding: 3rem; text-align: center; border-radius: 1rem;
+        cursor: pointer; transition: 0.3s;
+      }
+      .file-drop:hover { border-color: var(--primary); background: rgba(99, 102, 241, 0.05); }
+      .btn-analyze {
+        width: 100%; margin-top: 2rem; padding: 1.2rem; background: linear-gradient(135deg, var(--primary), var(--accent));
+        color: white; border: none; border-radius: 1rem; font-size: 1.1rem; font-weight: 800; cursor: pointer;
+      }
+      #results { display: none; animation: slideUp 0.8s ease forwards; }
+      .dashboard-grid {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;
+      }
+      .dash-card {
+        background: var(--glass); border: 1px solid var(--border); border-radius: 1.5rem; padding: 1.8rem; backdrop-filter: blur(15px);
+      }
+      .metric-title { color: var(--text-muted); font-size: 0.9rem; font-weight: 600; text-transform: uppercase; }
+      .metric-value { font-size: 2.8rem; font-weight: 800; margin: 5px 0; display: block; }
+      .review-quote { padding: 1.2rem; border-radius: 1rem; margin-top: 1rem; font-size: 0.95rem; border-left: 4px solid; }
+      .best-quote { background: rgba(16, 185, 129, 0.1); border-color: var(--success); }
+      .worst-quote { background: rgba(239, 68, 68, 0.1); border-color: var(--danger); }
+
+      /* Pie chart boyutları küçültüldü */
+      .main-pie-box { max-width: 450px; height: 350px; margin: 1.5rem auto 0 auto; display: flex; justify-content: center; }
+
+      .topic-detail-card {
+        background: var(--glass); border: 1px solid var(--border); border-radius: 1.5rem; padding: 1.8rem;
+        backdrop-filter: blur(15px); margin-top: 1.5rem;
+      }
+      .topic-detail-grid { display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1.5rem; }
+
+      .topic-row {
+        background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-radius: 1.2rem; padding: 1.5rem;
+        display: grid; grid-template-columns: 1fr; gap: 1.5rem; align-items: center;
+      }
+      @media (min-width: 768px) {
+        .topic-row { grid-template-columns: 1fr 2fr 1.5fr; }
+      }
+
+      .topic-info-side { display: flex; flex-direction: column; justify-content: center; }
+      .topic-bar-box { max-width: 100%; margin: 0 auto; width: 100%; }
+      .topic-comments-side { display: flex; flex-direction: column; gap: 10px; justify-content: center; }
+      .inline-quote {
+        padding: 0.8rem 1.2rem; border-radius: 0.8rem; font-size: 0.85rem; border-left: 3px solid; background: rgba(0,0,0,0.2); line-height: 1.4;
+      }
+      .badge-p { color: #10b981; font-weight: 800; margin-right: 5px; }
+      .badge-ne { color: #ef4444; font-weight: 800; margin-right: 5px; }
+
+      .about-content { padding: 0.5rem; }
+      .about-text { color: #e2e8f0; font-size: 1rem; line-height: 1.7; margin-bottom: 1.5rem; }
+      .features-mini-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.2rem; margin-top: 1.5rem; }
+      .feature-mini-card { background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: 1rem; padding: 1.2rem; display: flex; align-items: flex-start; gap: 12px; }
+      .feature-mini-card i { color: var(--primary); font-size: 1.2rem; margin-top: 3px; }
+      .feature-mini-card h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 4px; color: #f8fafc; }
+      .feature-mini-card p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; }
+
+      .footer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; padding: 0.5rem; }
+      .contact-item { display: flex; align-items: center; gap: 15px; margin-bottom: 1.2rem; font-size: 0.95rem; color: #e2e8f0; }
+      .contact-item i { font-size: 1.2rem; color: var(--primary); width: 25px; text-align: center; }
+      .social-links { display: flex; gap: 15px; margin-top: 1.5rem; }
+      .social-icon {
+        width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border);
+        display: flex; align-items: center; justify-content: center; color: white; text-decoration: none; transition: 0.3s ease;
+      }
+      .social-icon:hover { background: var(--primary); transform: translateY(-3px); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
+      .map-container { width: 100%; height: 220px; border-radius: 1rem; overflow: hidden; border: 1px solid var(--border); }
+
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes slideUp { from { opacity: 0; transform: translateY(50px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+  </head>
+  <body>
+    <video autoplay muted loop playsinline class="video-background">
+      <source src="static/239788.mp4" type="video/mp4" />
+    </video>
+    <div class="overlay"></div>
+
+    <nav>
+      <div class="brand">ReviewInsight.ai</div>
+      <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600">PRO DASHBOARD v1.9</div>
+    </nav>
+
+    <div class="container">
+      <div class="glass-card glass-card-no-pad">
+        <div class="tabs">
+          <button class="tab-btn active" onclick="showTab('text')">Metin</button>
+          <button class="tab-btn" onclick="showTab('file')">Dosya</button>
+          <button class="tab-btn" onclick="showTab('link')">Link</button>
+        </div>
+        <div class="content-area">
+          <div id="text" class="input-group active">
+            <textarea placeholder="Analiz edilecek yorumları buraya yapıştırın..."></textarea>
+          </div>
+          <div id="file" class="input-group">
+            <div class="file-drop" onclick="document.getElementById('fileInput').click()">
+              <p id="file-title" style="font-size: 1.1rem; font-weight: 700">Dosyayı Sürükleyin veya Seçin</p>
+              <p id="file-desc" style="color: var(--text-muted); font-size: 0.9rem">CSV veya Excel dosyası yükleyin (Yorumlar A sütununda olmalıdır)</p>
+              <input type="file" id="fileInput" accept=".csv, .xlsx, .xls" style="display: none" />
+            </div>
+          </div>
+          <div id="link" class="input-group">
+            <input type="text" class="url-input" placeholder="Yapım Aşamasında" />
+          </div>
+          <button class="btn-analyze" onclick="startAnalysis()">Analizi Başlat ✨</button>
+        </div>
+      </div>
+
+      <div id="results">
+        <div class="dashboard-grid">
+          <div class="dash-card">
+            <span class="metric-title">📊 ÖZET</span>
+            <span id="summary-rate" class="metric-value" style="color: var(--success)">%0</span>
+            <p id="summary-text" style="font-size: 0.85rem; color: var(--text-muted)">Toplam: 0 | Pozitif: 0 | Negatif: 0</p>
+          </div>
+
+          <div class="dash-card">
+            <span class="metric-title">KRİTİK GÖRÜŞLER</span>
+            <div class="review-quote best-quote">
+              <small style="color: var(--success); font-weight: 800">⭐ EN İYİ YORUM</small>
+              <p id="best-review-text">"Analiz bekleniyor..."</p>
+            </div>
+            <div class="review-quote worst-quote">
+              <small style="color: var(--danger); font-weight: 800">❌ EN KÖTÜ YORUM</small>
+              <p id="worst-review-text">"Analiz bekleniyor..."</p>
+            </div>
+          </div>
+
+          <div class="dash-card">
+            <span class="metric-title">💡 İÇGÖRÜLER</span>
+            <div id="insights-list" style="margin-top: 1rem; line-height: 1.6;">
+              </div>
+          </div>
+        </div>
+
+        <div class="dash-card" style="margin-top: 1.5rem">
+          <span class="metric-title">🧠 KONU DAĞILIMI (Toplam Yoruma Göre)</span>
+          <div class="main-pie-box">
+            <canvas id="mainTopicsPieChart"></canvas>
+          </div>
+        </div>
+
+        <div class="topic-detail-card">
+          <span class="metric-title">🔍 KONU DETAYLARI (Konu Bazlı Dağılımlar ve Örnek Yorumlar)</span>
+          <div class="topic-detail-grid" id="topicDetailsContainer"></div>
+        </div>
+      </div>
+
+      <div class="glass-card" style="margin-top: 3rem">
+        <div class="about-content">
+          <span class="metric-title" style="display: block; margin-bottom: 1rem">🚀 Hakkımızda</span>
+          <p class="about-text">
+            ReviewInsight.ai, kullanıcı ve müşteri geri bildirimlerini derinlemesine analiz etmek amacıyla geliştirilmiş fütüristik bir yapay zeka analiz platformudur. Gelişmiş Doğal Dil İşleme (NLP) algoritmalarını kullanan sistemimiz; binlerce satırlık metin, dosya veya e-ticaret linkini saniyeler içinde işleyerek kargo, fiyat, kalite gibi kritik konu başlıklarını (topics) otomatik olarak ayrıştırır.
+          </p>
+          <div class="features-mini-grid">
+            <div class="feature-mini-card">
+              <i class="fas fa-brain"></i>
+              <div><h4>Gelişmiş NLP Motoru</h4><p>Metinlerdeki anlamsal bağlamı çözerek duygu durumlarını yakalar.</p></div>
+            </div>
+            <div class="feature-mini-card">
+              <i class="fas fa-chart-pie"></i>
+              <div><h4>Konu Bazlı Filtreleme</h4><p>Yorumları kargo, fiyat ve kalite gibi segmentlere otomatik böler.</p></div>
+            </div>
+            <div class="feature-mini-card">
+              <i class="fas fa-bolt"></i>
+              <div><h4>Anlık Raporlama</h4><p>Dinamik grafikler ve örnek içgörülerle hızlı aksiyon aldırır.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card" style="margin-top: 3rem; padding-bottom: 0; overflow: hidden;">
+        <div class="footer-grid">
+          <div>
+            <span class="metric-title" style="display: block; margin-bottom: 1.5rem">📞 Bize Ulaşın</span>
+            <div class="contact-item"><i class="fas fa-map-marker-alt"></i><span>Levent, Büyükdere Cd. No:199, İstanbul</span></div>
+            <div class="contact-item"><i class="fas fa-envelope"></i><a href="mailto:support@reviewinsight.ai" style="color: #e2e8f0; text-decoration: none;">support@reviewinsight.ai</a></div>
+            <div class="contact-item"><i class="fas fa-phone-alt"></i><span>+90 (212) 555 0123</span></div>
+            <div class="social-links">
+              <a href="#" class="social-icon"><i class="fab fa-twitter"></i></a>
+              <a href="#" class="social-icon"><i class="fab fa-linkedin-in"></i></a>
+              <a href="#" class="social-icon"><i class="fab fa-github"></i></a>
+            </div>
+          </div>
+          <div>
+            <span class="metric-title" style="display: block; margin-bottom: 1.5rem">📍 Ofis Konumu</span>
+            <div class="map-container">
+              <iframe src="https://maps.google.com/maps?q=Levent%20Istanbul&t=&z=13&ie=UTF8&iwloc=&output=embed" width="100%" height="100%" style="border: 0; filter: grayscale(100%) invert(92%) contrast(83%);" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            </div>
+          </div>
+        </div>
+        <div style="background: rgba(15, 23, 42, 0.4); text-align: center; padding: 1.5rem; font-size: 0.8rem; color: var(--text-muted); border-top: 1px solid var(--border); margin-top: 2rem;">
+          © 2026 ReviewInsight.ai. Tüm Hakları Saklıdır.
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let topicsData = [];
+      let dashboardData = null;
+      let uploadedReviews = [];
+
+      function fixEncoding(text) {
+          if (!text) return "";
+          try { return decodeURIComponent(escape(text)); }
+          catch(e) { return text; }
+      }
+
+      document.getElementById('fileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if(!file) return;
+        document.getElementById('file-title').innerText = "📄 " + file.name;
+        document.getElementById('file-desc').innerText = "Dosya okunuyor...";
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, {type: 'array'});
+          const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
+          let extracted = [];
+          for(let i = 0; i < json.length; i++) {
+              let text = String(json[i][0] || "").trim();
+              if(text.length > 5 && text.toLowerCase() !== "yorum" && text.toLowerCase() !== "review") {
+                  extracted.push(text);
+              }
+          }
+          uploadedReviews = extracted;
+          document.getElementById('file-desc').innerText =extracted.length + " yorum başarıyla okundu!";
+          document.getElementById('file-desc').style.color = "var(--success)";
+        };
+        reader.readAsArrayBuffer(file);
+      });
+
+      function showTab(tabId) {
+        document.querySelectorAll(".input-group").forEach(el => el.classList.remove("active"));
+        document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
+        document.getElementById(tabId).classList.add("active");
+        event.currentTarget.classList.add("active");
+      }
+
+      async function startAnalysis() {
+        const btn = document.querySelector(".btn-analyze");
+        btn.innerText = "Yapay Zeka İnceliyor... ⏳";
+        btn.disabled = true;
+
+        try {
+          await fetchAnalysisData();
+          document.getElementById("results").style.display = "block";
+          updateSummaryCards();
+          renderMainPieChart();
+          renderTopicDetails();
+
+          btn.innerText = "Analiz Tamamlandı ✓";
+          window.scrollTo({ top: document.getElementById("results").offsetTop - 100, behavior: 'smooth' });
+        } catch (error) {
+          console.error("Analiz Hatası:", error);
+          alert("Hata: " + error.message);
+          btn.innerText = "Analizi Başlat ✨";
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      async function fetchAnalysisData() {
+        let reviews = [];
+        const isFileTabActive = document.getElementById("file").classList.contains("active");
+        if (isFileTabActive) {
+            reviews = uploadedReviews;
+            if(reviews.length === 0) throw new Error("Dosya boş veya henüz okunmadı.");
+        } else {
+            const rawText = document.querySelector("textarea").value;
+            reviews = rawText.split(/[\n.!?]+/).map(r => r.trim()).filter(r => r.length > 5);
+        }
+
+        const response = await fetch("http://127.0.0.1:8000/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reviews })
+        });
+
+        const responseData = await response.json();
+        dashboardData = responseData.data;
+
+        topicsData = Object.entries(dashboardData.topics).map(([name, value]) => {
+            const negCount = value.sentiment_distribution?.negative || 0;
+            return {
+                name: fixEncoding(name),
+                total: value.count,
+                pos: value.sentiment_distribution?.positive || 0,
+                neu: value.sentiment_distribution?.neutral || 0,
+                neg: negCount,
+                sample_pos: fixEncoding(value.best_review?.text || "Pozitif yorum bulunamadı."),
+                // Mantık Hatası 2 Çözümü: Eğer negatif yorum yoksa boşuna Nötr yorumu En Kötü olarak gösterme
+                sample_neg: negCount > 0 ? fixEncoding(value.worst_review?.text) : "Bu konuda negatif bir eleştiri bulunmuyor ✨"
+            };
+        });
+      }
+
+      function updateSummaryCards() {
+        const total = dashboardData.total_reviews;
+        const posCount = dashboardData.sentiment_distribution.positive || 0;
+        const negCount = dashboardData.sentiment_distribution.negative || 0;
+        const posRate = total > 0 ? Math.round((posCount / total) * 100) : 0;
+
+        document.getElementById("summary-rate").innerText = `${posRate}%`;
+        document.getElementById("summary-text").innerText =`Toplam: ${total} | Pozitif: ${posCount} | Negatif: ${negCount}`;
+
+        if (topicsData.length > 0) {
+          document.getElementById("best-review-text").innerText =`${topicsData[0].sample_pos}`;
+
+          // Eğer genel olarak hiç negatif veri yoksa, en kötü inceleme kutusuna uyarı verelim
+          if (negCount === 0) {
+              document.getElementById("worst-review-text").innerText = "Sistemde negatif bir yorum bulunamadı.";
+          } else {
+              // Negatif yorumu olan ilk konunun sample_neg'ini al
+              const firstNegativeTopic = topicsData.find(t => t.neg > 0) || topicsData[0];
+              document.getElementById("worst-review-text").innerText =`${firstNegativeTopic.sample_neg}`;
+          }
+        }
+
+        // --- GELİŞTİRİLMİŞ INSIGHTS BÖLÜMÜ ---
+        let bestTopic = "Veri Yok";
+        let worstTopic = "Şikayet bulunmuyor 🎉"; // Mantık Hatası 1 Çözümü
+        let mostDiscussed = "Veri Yok";
+        let polarizingTopic = "Veri Yok";
+
+        if (topicsData.length > 0) {
+            // En çok tartışılan (Total count en yüksek)
+            let sortedByTotal = [...topicsData].sort((a,b) => b.total - a.total);
+            mostDiscussed = sortedByTotal[0].name;
+
+            // En beğenilen (Pozitif oranı en yüksek)
+            let sortedPos = [...topicsData].sort((a,b) => (b.pos/(b.total||1)) - (a.pos/(a.total||1)));
+            bestTopic = sortedPos[0].name;
+
+            // En problemli (Negatif oranı en yüksek, ancak en az 1 negatif olmalı)
+            let topicsWithNegatives = topicsData.filter(t => t.neg > 0);
+            if (topicsWithNegatives.length > 0) {
+                let sortedNeg = topicsWithNegatives.sort((a,b) => (b.neg/(b.total||1)) - (a.neg/(a.total||1)));
+                worstTopic = sortedNeg[0].name;
+            }
+
+            // En Kutuplaştırıcı (Pozitif ve Negatifin birbirine en yakın olduğu, total>1 olanlar)
+            let validForPolarization = topicsData.filter(t => t.pos > 0 && t.neg > 0 && t.total > 1);
+            if(validForPolarization.length > 0) {
+                let sortedPolarized = validForPolarization.sort((a,b) => {
+                    let ratioA = Math.min(a.pos, a.neg) / Math.max(a.pos, a.neg);
+                    let ratioB = Math.min(b.pos, b.neg) / Math.max(b.pos, b.neg);
+                    return ratioB - ratioA; // En yüksek ratio (1'e en yakın) en başta
+                });
+                polarizingTopic = sortedPolarized[0].name;
+            } else {
+                polarizingTopic = "Kutuplaşma tespit edilemedi";
+            }
+        }
+
+        document.getElementById("insights-list").innerHTML = `
+            <p style="margin-bottom: 10px;">🗣️ <b>En Çok Gündeme Gelen:</b> Kullanıcılar en çok <b>${mostDiscussed}</b> alanına odaklanmış.</p>
+            <p style="margin-bottom: 10px;">🟢 <b>En Güçlü Yönünüz:</b> <b>${bestTopic}</b> alanı müşterileri en çok memnun eden özellik.</p>
+            <p style="margin-bottom: 10px;">🔴 <b>Gelişim Alanı:</b> Kullanıcıların en çok şikayet ettiği alan <b>${worstTopic}</b>.</p>
+            <p>⚖️ <b>En Yüksek Kutuplaşma:</b> <b>${polarizingTopic}</b> konusunda müşteriler ikiye bölünmüş durumda.</p>
+        `;
+      }
+
+      function renderMainPieChart() {
+        const labels = topicsData.map(t => t.name);
+        const counts = topicsData.map(t => t.total);
+        const ctx = document.getElementById("mainTopicsPieChart").getContext("2d");
+
+        if (window.mainPieChartInstance) window.mainPieChartInstance.destroy();
+
+        window.mainPieChartInstance = new Chart(ctx, {
+          type: "pie",
+          data: {
+              labels,
+              datasets: [{ data: counts, backgroundColor: ["#6366f1", "#a855f7", "#f59e0b", "#10b981", "#ef4444", "#ec4899", "#06b6d4"] }]
+          },
+          options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                  legend: {
+                      position: 'right',
+                      labels: {
+                          font: { size: 14, family: "'Plus Jakarta Sans', sans-serif" }, // İsimler Büyütüldü
+                          color: '#f8fafc',
+                          padding: 20
+                      }
+                  },
+                  tooltip: {
+                      callbacks: {
+                          label: function(context) {
+                              let val = context.raw;
+                              let total = context.chart._metasets[context.datasetIndex].total;
+                              let pct = Math.round((val / total) * 100);
+                              return ` ${context.label}: ${val} Yorum (%${pct})`;
+                          }
+                      }
+                  }
+              }
+          }
+        });
+      }
+
+      function renderTopicDetails() {
+        const container = document.getElementById("topicDetailsContainer");
+        container.innerHTML = "";
+
+        topicsData.forEach((t, i) => {
+          const rowId = `topic-bar-${i}`;
+          const row = document.createElement("div");
+          row.className = "topic-row";
+
+          // Eğer negatif yorum yoksa, kırmızı badge ve border'ı griye/yeşile çevirebilir veya nötrletebiliriz
+          let negStyle = t.neg > 0 ? "border-color: var(--danger); background: rgba(239, 68, 68, 0.05);" : "border-color: var(--text-muted); background: rgba(255, 255, 255, 0.05);";
+          let negBadge = t.neg > 0 ? `<span class="badge-ne">En kötü yorum:</span>` : ``;
+
+          row.innerHTML = `
+            <div class="topic-info-side">
+                <div style="font-weight: 800; font-size: 1.1rem; margin-bottom: 5px;">📌 ${t.name}</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">Toplam: ${t.total} Yorum</div>
+            </div>
+            <div class="topic-comments-side">
+                <div class="inline-quote" style="border-color: var(--success); background: rgba(16, 185, 129, 0.05);">
+                    <span class="badge-p">En iyi yorum:</span> ${t.sample_pos}
+                </div>
+                <div class="inline-quote" style="${negStyle}">
+                    ${negBadge} ${t.sample_neg}
+                </div>
+            </div>
+            <div class="topic-bar-box">
+                <canvas id="${rowId}"></canvas>
+            </div>
+          `;
+
+          container.appendChild(row);
+
+          new Chart(document.getElementById(rowId).getContext("2d"), {
+            type: "bar",
+            data: {
+                labels: ["Pozitif", "Nötr", "Negatif"],
+                datasets: [{ data: [t.pos, t.neu, t.neg], backgroundColor: ["#10b981", "#94a3b8", "#ef4444"] }]
+            },
+            options: {
+                indexAxis: 'y',
+                plugins: { legend: { display: false } },
+                scales: { x: { display: false } }
+            }
+          });
+        });
+      }
+    </script>
+  </body>
+</html>

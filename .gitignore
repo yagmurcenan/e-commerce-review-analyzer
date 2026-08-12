@@ -1,0 +1,15 @@
+data/
+models/
+artifacts/
+
+__pycache__/
+*.pyc
+
+.venv/
+venv/
+env/
+
+.env
+
+.idea/
+.ipynb_checkpoints/
